@@ -46,7 +46,9 @@ class DocsVectorStore:
         query_embedding: list[float],
         top_k: int = 5,
         source_ids: list[str] | None = None,
+        max_distance: float = 0.8,
     ) -> list[dict]:
+        """Return chunks within max_distance (cosine). 0 = identical, 1 = opposite."""
         count = self.collection.count()
         if count == 0:
             return []
@@ -66,12 +68,15 @@ class DocsVectorStore:
 
         docs = []
         for i, doc_id in enumerate(results["ids"][0]):
+            distance = results["distances"][0][i]
+            if distance > max_distance:
+                continue
             docs.append(
                 {
                     "id": doc_id,
                     "document": results["documents"][0][i],
                     "metadata": results["metadatas"][0][i],
-                    "distance": results["distances"][0][i],
+                    "distance": distance,
                 }
             )
         return docs
