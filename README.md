@@ -13,6 +13,15 @@ Built with **FastAPI**, **ChromaDB**, **ONNX Runtime** embeddings, and **Claude*
 
 ---
 
+## Quick overview
+
+- **Index** any documentation via `POST /index` — text is chunked, embedded, and stored in a vector database
+- **Ask** natural language questions via `POST /ask` — relevant chunks are retrieved, filtered by semantic relevance, and sent to an LLM for a grounded answer with source citations
+- **Manage** indexed sources via `GET /sources` and `DELETE /sources/{id}`
+- No GPU required — embeddings run via ONNX Runtime; the full test suite runs without API keys
+
+---
+
 ## The problem
 
 Keyword search breaks on documentation. A user searches for *"how to handle payment failures"* but the relevant paragraph says *"retry logic for declined transactions"* — zero keyword overlap, relevant content missed.
@@ -39,7 +48,7 @@ ChromaDB upsert               (discard semantically unrelated chunks)
                                           │
                                           ▼
                                 Guard: no chunks? → skip LLM
-ChromaDB upsert                          │
+                                         │
                                          ▼
                                   Build prompt with context
                                          │
@@ -352,6 +361,19 @@ tests/
 - **Pydantic v2** — request/response validation
 - **pytest** — test suite (no external dependencies required)
 - **Docker** + docker-compose
+
+---
+
+## Future improvements
+
+The items below are conscious next steps, not missing fundamentals.
+
+- **Hybrid search** — combine semantic search with BM25 keyword search; semantic search excels at meaning but misses exact-match queries (product codes, error codes, version numbers)
+- **Re-ranking** — add a cross-encoder after initial retrieval to re-score the top-k chunks with higher precision; the tradeoff is latency (cross-encoders are 10-50x slower than bi-encoders)
+- **Streaming responses** — stream LLM output token-by-token using `client.messages.stream()` to reduce perceived latency on longer answers
+- **Multi-tenant isolation** — API key per tenant, with `tenant_id` injected into every ChromaDB metadata filter so each tenant's data is fully isolated
+- **Semantic chunking** — split by paragraph and sentence boundaries instead of character count, preserving semantic coherence within each chunk
+- **RAG evaluation** — integrate [RAGAS](https://github.com/explodinggradients/ragas) to measure context precision, context recall, and answer faithfulness against a golden dataset
 
 ---
 
