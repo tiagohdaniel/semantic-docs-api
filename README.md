@@ -1,6 +1,12 @@
 # Semantic Docs API
 
-A production-ready REST API for semantic search over your documentation.
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688)
+![Tests](https://img.shields.io/badge/tests-13%20passed-brightgreen)
+![Docker](https://img.shields.io/badge/docker-ready-2496ED)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+A REST API for semantic search over documentation.
 Index any text content, ask natural language questions, and get LLM-generated answers grounded on retrieved context — with source references and relevance scores.
 
 Built with **FastAPI**, **ChromaDB**, **ONNX Runtime** embeddings, and **Claude** as the reasoning layer.
@@ -346,6 +352,33 @@ tests/
 - **Pydantic v2** — request/response validation
 - **pytest** — test suite (no external dependencies required)
 - **Docker** + docker-compose
+
+---
+
+## Known limitations & production considerations
+
+This project is intentionally scoped as a single-tenant, single-instance service. The following are the gaps between this implementation and a production-grade deployment, and the reasoning behind each.
+
+**No authentication**
+Every request has full read/write access to the index. In production, you'd add API key validation as FastAPI middleware — each key maps to a tenant, and every ChromaDB query includes a `tenant_id` metadata filter to isolate data.
+
+**ChromaDB runs in-process with a single writer**
+`chromadb.PersistentClient` writes directly to disk. With `uvicorn --workers N`, each worker process has its own client instance pointing to the same directory — concurrent writes can corrupt the index. The fix is ChromaDB server mode (one HTTP server, N clients) or replacing ChromaDB with a managed vector store (Pinecone, Weaviate cloud) behind an interface.
+
+**Character-based chunking**
+Splitting at 500 characters can break mid-sentence or mid-code block. A better approach is semantic chunking: split by paragraph, then merge small paragraphs, then split oversized ones. This requires a tokenizer-aware splitter (e.g., LangChain's `RecursiveCharacterTextSplitter` with token counting).
+
+**No re-ranking**
+The retrieval step uses a bi-encoder (fast, approximate). For higher precision, a cross-encoder re-ranker (e.g., `cross-encoder/ms-marco-MiniLM-L-6-v2`) can re-score the top-k results before sending them to the LLM. The tradeoff is latency: cross-encoders are 10-50x slower than bi-encoders.
+
+**No LLM response streaming**
+`AnthropicClient.generate()` waits for the full response before returning. For a user-facing product, streaming the response token-by-token (using `client.messages.stream()`) would significantly improve perceived latency.
+
+**No RAG evaluation**
+There is no measurement of retrieval quality or answer faithfulness. In production, you'd integrate a framework like [RAGAS](https://github.com/explodinggradients/ragas) to track metrics like context precision, context recall, and answer relevance over a golden dataset.
+
+**`max_distance=0.8` is empirical**
+The threshold was chosen by testing against general documentation. Different domains (legal, medical, code) have different embedding distributions — the right value should be calibrated per domain using a labeled evaluation set.
 
 ---
 
