@@ -144,6 +144,41 @@ If the vector search returns nothing after the distance filter, the LLM is never
 
 ---
 
+### Prompt design
+
+The prompt passed to Claude has two sections, separated by Markdown headings:
+
+```
+## Documentation
+
+[1] Source: FastAPI Introduction
+FastAPI is a modern web framework...
+
+[2] Source: FastAPI Introduction
+It uses Pydantic for data validation...
+
+## Question
+
+What does FastAPI use for data validation?
+```
+
+The system prompt instructs the model to answer **only** from the provided documentation:
+
+```python
+SYSTEM_PROMPT = """You are a technical documentation assistant.
+Answer questions based ONLY on the provided documentation excerpts.
+If the documentation does not contain enough information, say so clearly.
+Be concise, accurate, and cite the source document when relevant."""
+```
+
+**Why `temperature=0`:** RAG answers should be deterministic and grounded, not creative. With `temperature=0`, the model always picks the highest-probability token — given the same context, it produces the same answer. This makes behaviour predictable and easier to evaluate.
+
+**Why numbered source blocks:** Numbering chunks (`[1]`, `[2]`) gives the model a natural way to reference sources in its answer ("According to [1]..."). It also makes the context structure visible when debugging retrieval quality.
+
+**Why Markdown headings (`##`) to separate sections:** Claude responds better to structured prompts. A clear visual boundary between *context* and *question* reduces the chance the model treats part of the documentation as an instruction.
+
+---
+
 ### Idempotent indexing: delete-before-upsert
 
 Re-indexing the same `source_id` deletes all existing chunks first, then inserts the new ones.
