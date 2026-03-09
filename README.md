@@ -17,7 +17,7 @@ Built with **FastAPI**, **ChromaDB**, **ONNX Runtime** embeddings, and **Claude*
 
 - **Index** any documentation via `POST /index` — text is chunked, embedded, and stored in a vector database
 - **Ask** natural language questions via `POST /ask` — relevant chunks are retrieved, filtered by semantic relevance, and sent to an LLM for a grounded answer with source citations
-- **Manage** indexed sources via `GET /sources` and `DELETE /sources/{id}`
+- **Manage** indexed sources via `GET /sources` and `DELETE /sources/{source_id}`
 - No GPU required — embeddings run via ONNX Runtime; the full test suite runs without API keys
 
 ---
@@ -278,7 +278,7 @@ curl -X POST http://localhost:8000/ask \
 ### With Docker (recommended)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/semantic-docs-api
+git clone https://github.com/tiagohdaniel/semantic-docs-api
 cd semantic-docs-api
 
 cp .env.example .env
@@ -302,7 +302,7 @@ It indexes two documents, asks questions (including a filtered query and an out-
 ### Without Docker
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
