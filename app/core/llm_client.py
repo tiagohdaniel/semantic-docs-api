@@ -14,6 +14,7 @@ class AnthropicClient:
         self.model = model
         self.client = AsyncAnthropic(api_key=api_key)
 
+    # TODO: add streaming support via client.messages.stream() to reduce perceived latency
     async def generate(self, prompt: str, max_tokens: int = 1000) -> dict:
         message = await self.client.messages.create(
             model=self.model,

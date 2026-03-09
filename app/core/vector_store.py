@@ -91,6 +91,7 @@ class DocsVectorStore:
             self.collection.delete(ids=ids)
         return len(ids)
 
+    # TODO: pagination — this loads all metadata into memory, will be slow at scale
     def list_sources(self) -> list[dict]:
         if self.collection.count() == 0:
             return []
