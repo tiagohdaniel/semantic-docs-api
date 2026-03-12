@@ -14,7 +14,23 @@ class AnthropicClient:
         self.model = model
         self.client = AsyncAnthropic(api_key=api_key)
 
-    # TODO: add streaming support via client.messages.stream() to reduce perceived latency
+    async def stream(self, prompt: str, max_tokens: int = 1000):
+        """Yields text tokens as they are generated."""
+        async with self.client.messages.stream(
+            model=self.model,
+            max_tokens=max_tokens,
+            temperature=0,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            async for text in stream.text_stream:
+                yield text
+            message = await stream.get_final_message()
+            yield {
+                "tokens_used": message.usage.input_tokens + message.usage.output_tokens,
+                "model": self.model,
+            }
+
     async def generate(self, prompt: str, max_tokens: int = 1000) -> dict:
         message = await self.client.messages.create(
             model=self.model,

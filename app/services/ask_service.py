@@ -37,6 +37,34 @@ class AskService:
             model=result.get("model", ""),
         )
 
+    async def ask_stream(self, request: AskRequest):
+        query_embedding = self.embedding.encode([request.question])[0]
+
+        docs = self.vector_store.search(
+            query_embedding=query_embedding,
+            top_k=request.top_k,
+            source_ids=request.source_ids,
+            max_distance=request.max_distance,
+        )
+
+        if not docs:
+            yield {"type": "token", "content": "No relevant documentation found. Make sure you have indexed content via POST /index."}
+            return
+
+        prompt = self._build_prompt(request.question, docs)
+        sources = self._build_sources(docs)
+
+        async for chunk in self.llm.stream(prompt=prompt):
+            if isinstance(chunk, str):
+                yield {"type": "token", "content": chunk}
+            else:
+                yield {
+                    "type": "done",
+                    "sources": [s.model_dump() for s in sources],
+                    "tokens_used": chunk.get("tokens_used", 0),
+                    "model": chunk.get("model", ""),
+                }
+
     def _build_prompt(self, question: str, docs: list[dict]) -> str:
         context_blocks = []
         for i, doc in enumerate(docs, 1):
